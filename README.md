@@ -1,2 +1,2 @@
 # poooong
-2D OpenGL game inspired by Pong
+2D online multiplayer OpenGL game inspired by Pong
