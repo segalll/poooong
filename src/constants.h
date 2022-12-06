@@ -1,7 +1,8 @@
 #pragma once
 
-#include <string>
 #include <glm/vec2.hpp>
+
+#include <string>
 
 enum class State {
     JOIN,
@@ -36,8 +37,7 @@ struct Button {
     std::string text;
     float textScale = 1.0f;
 
-    Button(glm::vec2 bPos, glm::vec2 bSize, State bOnClick, std::string bText)
-    {
+    Button(glm::vec2 bPos, glm::vec2 bSize, State bOnClick, std::string bText) {
         pos = bPos;
         size = bSize;
         onClick = bOnClick;
@@ -51,43 +51,37 @@ struct Slider {
     float value;
     bool moving = false;
 
-    Slider(glm::vec2 sPos, glm::vec2 sSize, float sValue)
-    {
+    Slider(glm::vec2 sPos, glm::vec2 sSize, float sValue) {
         pos = sPos;
         size = sSize;
         value = sValue;
     }
 };
 
-enum class ClientMessage : unsigned char
-{
+enum class ClientMessage : unsigned char {
     Join, // tell server we're new here
     Leave, // tell server we're leaving
     Input // tell server our user input
 };
 
-enum class ServerMessage : unsigned char
-{
+enum class ServerMessage : unsigned char {
     JoinResult, // tell client they're accepted/rejected
     State, // tell client game state
     GoalScored // tell client goal was scored
 };
 
-struct PlayerState
-{
+struct PlayerState {
     glm::vec2 pos;
     glm::vec2 paddlePos;
     float stamina;
 };
 
-struct Snapshot
-{
+struct Snapshot {
     glm::vec2 playerPositions[2];
     glm::vec2 ballPos;
     float time;
 
-    bool operator <(float const i) const
-    {
+    bool operator<(float const i) const {
         return time < i;
     }
 };

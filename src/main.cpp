@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "constants.h"
-#include "shaders.h"
+#include "shader.h"
 #include "net.h"
 
 #include <ft2build.h>
@@ -200,10 +200,9 @@ void renderText(unsigned int shader, std::string text, glm::vec2 pos, float scal
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(textVao);
 
-    std::string::const_iterator i;
     float total_width = 0.0f;
-    for (i = text.begin(); i != text.end(); i++) {
-        Character ch = characters.at(*i);
+    for (char c : text) {
+        Character ch = characters.at(c);
         total_width += (ch.Advance >> 6) * scale;
     }
     Character end = characters.at(text.back());
@@ -212,9 +211,8 @@ void renderText(unsigned int shader, std::string text, glm::vec2 pos, float scal
 
     pos = coordsToPixels(pos);
 
-    std::string::const_iterator c;
-    for (c = text.begin(); c != text.end(); c++) {
-        Character ch = characters.at(*c);
+    for (char c : text) {
+        Character ch = characters.at(c);
 
         float xpos = pos.x + ch.Bearing.x * scale;
         float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * scale;
@@ -226,13 +224,13 @@ void renderText(unsigned int shader, std::string text, glm::vec2 pos, float scal
         ypos -= height / 2;
 
         float vertices[6][4] = {
-            { xpos,     ypos + h,   0.0f, 0.0f },
-            { xpos,     ypos,       0.0f, 1.0f },
-            { xpos + w, ypos,       1.0f, 1.0f },
+            { xpos,     ypos + h, 0.0f, 0.0f },
+            { xpos,     ypos,     0.0f, 1.0f },
+            { xpos + w, ypos,     1.0f, 1.0f },
 
-            { xpos,     ypos + h,   0.0f, 0.0f },
-            { xpos + w, ypos,       1.0f, 1.0f },
-            { xpos + w, ypos + h,   1.0f, 0.0f }
+            { xpos,     ypos + h, 0.0f, 0.0f },
+            { xpos + w, ypos,     1.0f, 1.0f },
+            { xpos + w, ypos + h, 1.0f, 0.0f }
         };
         glBindTexture(GL_TEXTURE_2D, ch.TextureID);
         glBindBuffer(GL_ARRAY_BUFFER, textVbo);
@@ -265,12 +263,12 @@ void drawLoop(GLFWwindow* window) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0, 0.0, 0.0, 1.0);
 
-    shader::source playerShaderSource = shader::parse("res/shaders/Player.shader");
-    shader::source ballShaderSource = shader::parse("res/shaders/Ball.shader");
-    shader::source textShaderSource = shader::parse("res/shaders/Text.shader");
-    shader::source sliderShaderSource = shader::parse("res/shaders/Slider.shader");
-    shader::source rectangleShaderSource = shader::parse("res/shaders/Rectangle.shader");
-    shader::source obroundShaderSource = shader::parse("res/shaders/Obround.shader");
+    auto playerShaderSource = shader::parse("res/shaders/Player.shader");
+    auto ballShaderSource = shader::parse("res/shaders/Ball.shader");
+    auto textShaderSource = shader::parse("res/shaders/Text.shader");
+    auto sliderShaderSource = shader::parse("res/shaders/Slider.shader");
+    auto rectangleShaderSource = shader::parse("res/shaders/Rectangle.shader");
+    auto obroundShaderSource = shader::parse("res/shaders/Obround.shader");
 
     unsigned int playerShaderProgram = shader::create(playerShaderSource);
     unsigned int ballShaderProgram = shader::create(ballShaderSource);
