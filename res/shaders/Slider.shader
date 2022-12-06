@@ -3,23 +3,21 @@
 
 layout(location = 0) in vec4 vPosition;
 
-layout(std140) uniform Matrices
-{
+layout(std140) uniform Matrices {
     mat4 projection;
 };
 
 uniform mat4 model;
 uniform vec2 size;
 
-out vec2 fPos;
-out vec2 fSize;
+out vec2 vModelPosition;
+out vec2 vModelSize;
 
-void main()
-{
-    vec4 tempPosition = vec4(vPosition.x * size.x, vPosition.y * size.y, vPosition.z, vPosition.w);
-    gl_Position = projection * model * tempPosition;
-    fPos = vec2(tempPosition);
-    fSize = size;
+void main() {
+    vPosition *= size;
+    gl_Position = projection * model * vPosition;
+    vModelPosition = vPosition.xy;
+    vModelSize = size;
 }
 
 #shader fragment
@@ -27,28 +25,23 @@ void main()
 
 uniform float circlePos;
 
-in vec2 fPos;
-in vec2 fSize;
+in vec2 vModelPosition;
+in vec2 vModelSize;
 
 out vec4 fColor;
 
-void main()
-{
-    float used = (circlePos - 0.5) * 2 * (fSize.x - fSize.y);
-    float dist = distance(fPos, vec2(used, 0.0));
+void main() {
+    float used = (circlePos - 0.5) * 2 * (vModelSize.x - vModelSize.y);
+    float dist = distance(vModelPosition, vec2(used, 0.0));
     float delta = fwidth(dist);
-    float alphaOutside = smoothstep(fSize.y, fSize.y - delta, dist);
-    float alphaInside = smoothstep(fSize.y - 0.01, fSize.y - 0.01 + delta, dist);
+    float alphaOutside = smoothstep(vModelSize.y, vModelSize.y - delta, dist);
+    float alphaInside = smoothstep(vModelSize.y - 0.01, vModelSize.y - 0.01 + delta, dist);
     float alpha = 0.0;
-    if (abs(fPos.x - used) > fSize.y)
-    {
-        if (abs(fPos.y) < fSize.y / 4)
-        {
+    if (abs(vModelPosition.x - used) > vModelSize.y) {
+        if (abs(vModelPosition.y) < vModelSize.y / 4) {
             alpha = 1.0;
         }
-    }
-    else
-    {
+    } else {
         alpha = alphaOutside * alphaInside;
     }
 

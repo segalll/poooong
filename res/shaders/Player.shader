@@ -3,23 +3,21 @@
 
 layout(location = 0) in vec4 vPosition;
 
-layout(std140) uniform Matrices
-{
+layout(std140) uniform Matrices {
     mat4 projection;
 };
 
 uniform mat4 model;
 uniform float size;
 
-out vec2 fPos;
-out float fSize;
+out vec2 vModelPosition;
+out float vModelSize;
 
-void main()
-{
-    vec4 tempPosition = vec4(vPosition.x * (size + .01), vPosition.y * (size + .01), vPosition.z, vPosition.w);
-    gl_Position = projection * model * tempPosition;
-    fPos = vec2(tempPosition);
-    fSize = size;
+void main() {
+    vPosition.xy *= (size + .01);
+    gl_Position = projection * model * vPosition;
+    vModelPosition = vPosition.xy;
+    vModelSize = size;
 }
 
 #shader fragment
@@ -30,52 +28,35 @@ uniform float stamina;
 uniform vec2 paddleVec;
 uniform float paddleSize;
 
-in vec2 fPos;
-in float fSize;
+in vec2 vModelPosition;
+in float vModelSize;
 
 out vec4 fColor;
 
-void main()
-{
-    float dist = distance(fPos, vec2(0.0));
+void main() {
+    float dist = distance(vModelPosition, vec2(0.0));
     float delta = fwidth(dist);
-    float alpha = 1.0;
+    float alpha = 0.0;
 
-    if (dist > fSize / 2)
-    {
-        float alphaOutside = smoothstep(fSize, fSize - delta, dist);
-        float alphaInside = smoothstep(fSize - 0.01, fSize - 0.01 + delta, dist);
+    if (dist > vModelSize / 2) {
+        float alphaOutside = smoothstep(vModelSize, vModelSize - delta, dist);
+        float alphaInside = smoothstep(vModelSize - 0.01, vModelSize - 0.01 + delta, dist);
         alpha = alphaOutside * alphaInside;
-    }
-    else if (dist > fSize / 10)
-    {
-        if (atan(fPos.y, fPos.x) < stamina)
-        {
-            float alphaOutside = smoothstep(fSize / 4, (fSize / 4) - delta, dist);
-            float alphaInside = smoothstep((fSize / 4) - 0.0075, (fSize / 4) - 0.0075 + delta, dist);
+    } else if (dist > vModelSize / 10) {
+        if (atan(vModelPosition.y, vModelPosition.x) < stamina) {
+            float alphaOutside = smoothstep(vModelSize / 4, (vModelSize / 4) - delta, dist);
+            float alphaInside = smoothstep((vModelSize / 4) - 0.0075, (vModelSize / 4) - 0.0075 + delta, dist);
             alpha = alphaOutside * alphaInside;
         }
-        else
-        {
-            alpha = 0.0;
-        }
-    }
-    else
-    {
-        if (atan(fPos.y, fPos.x) < stamina)
-        {
-            alpha = smoothstep(fSize / 10, (fSize / 10) - delta, dist);
-        }
-        else
-        {
-            alpha = 0.0;
+    } else {
+        if (atan(vModelPosition.y, vModelPosition.x) < stamina) {
+            alpha = smoothstep(vModelSize / 10, (vModelSize / 10) - delta, dist);
         }
     }
 
-    vec3 tempColor = vec3(1.0, 1.0, 1.0);
-    if (distance(fPos, paddleVec * fSize) <= paddleSize)
-    {
-        tempColor = color;
+    vec3 outColor = vec3(1.0, 1.0, 1.0);
+    if (distance(vModelPosition, paddleVec * vModelSize) <= paddleSize) {
+        outColor = color;
     }
 
     fColor = vec4(tempColor, alpha);

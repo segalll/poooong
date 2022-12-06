@@ -3,23 +3,21 @@
 
 layout(location = 0) in vec4 vPosition;
 
-layout(std140) uniform Matrices
-{
+layout(std140) uniform Matrices {
     mat4 projection;
 };
 
 uniform mat4 model;
 uniform vec2 size;
 
-out vec2 fPos;
-out vec2 fSize;
+out vec2 vModelPosition;
+out vec2 vModelSize;
 
-void main()
-{
-    vec4 tempPosition = vec4(vPosition.x * size.x, vPosition.y * size.y, vPosition.z, vPosition.w);
-    gl_Position = projection * model * tempPosition;
-    fPos = vec2(tempPosition);
-    fSize = size;
+void main() {
+    vPosition.xy *= size;
+    gl_Position = projection * model * vPosition;
+    vModelPosition = vPosition.xy;
+    vModelSize = size;
 }
 
 #shader fragment
@@ -27,38 +25,28 @@ void main()
 
 uniform vec3 color;
 
-in vec2 fPos;
-in vec2 fSize;
+in vec2 vModelPosition;
+in vec2 vModelSize;
 
 out vec4 fColor;
 
-void main()
-{
+float calcAlpha(vec2 pos, vec2 size) {
     float dist;
-    float alphaOutside;
-    float alphaInside;
-    if (fPos.y < fSize.y - fSize.x && fPos.y > fSize.x - fSize.y)
-    {
-        dist = distance(fPos, vec2(0.0, fPos.y));
-        float delta = fwidth(dist);
-        alphaOutside = smoothstep(fSize.x, fSize.x - delta, dist);
-        alphaInside = smoothstep(fSize.x - 0.01, fSize.x - 0.01 + delta, dist);
+    if (pos.y < size.y - size.x && pos.y > size.x - size.y) {
+        dist = distance(pos, vec2(0.0, pos.y));
+    } else {
+        dist = distance(pos, vec2(0.0, abs(size.y - size.x)));
     }
-    else
-    {
-        if (fPos.y > 0)
-        {
-            dist = distance(fPos, vec2(0.0, fSize.y - fSize.x));
-        }
-        else
-        {
-            dist = distance(fPos, vec2(0.0, fSize.x - fSize.y));
-        }
-        float delta = fwidth(dist);
-        alphaOutside = smoothstep(fSize.x, fSize.x - delta, dist);
-        alphaInside = smoothstep(fSize.x - 0.01, fSize.x - 0.01 + delta, dist);
-    }
-    float alpha = alphaOutside * alphaInside;
+
+    float delta = fwidth(dist);
+    float alphaOutside = smoothstep(size.x, size.x - delta, dist);
+    float alphaInside = smoothstep(size.x - 0.01, size.x - 0.01 + delta, dist);
+
+    return alphaOutside * alphaInside;
+}
+
+void main() {
+    float alpha = calcAlpha(vModelPosition, vModelSize);
 
     fColor = vec4(color, alpha);
 }

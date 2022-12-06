@@ -3,18 +3,16 @@
 
 layout(location = 0) in vec4 vPosition;
 
-layout(std140) uniform Matrices
-{
+layout(std140) uniform Matrices {
     mat4 projection;
 };
 
 uniform mat4 model;
 uniform vec2 size;
 
-void main()
-{
-    vec4 tempPosition = vec4(vPosition.x * size.x, vPosition.y * size.y, vPosition.z, vPosition.w);
-    gl_Position = projection * model * tempPosition;
+void main() {
+    vPosition.xy *= size;
+    gl_Position = projection * model * vPosition;
 }
 
 #shader fragment
@@ -24,7 +22,6 @@ uniform vec3 color;
 
 out vec4 fColor;
 
-void main()
-{
+void main() {
     fColor = vec4(color, 1.0);
 }

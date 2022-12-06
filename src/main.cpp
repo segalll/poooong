@@ -1,35 +1,37 @@
 #include <Windows.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <math.h>
-#include <iostream>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+
+#include <math.h>
+
+#include <algorithm>
+#include <iostream>
 #include <map>
 #include <vector>
+
 #include "constants.h"
 #include "shaders.h"
-#include <ft2build.h>
-#include <algorithm>
 #include "net.h"
+
+#include <ft2build.h>
 #include FT_FREETYPE_H
 
 float prevWidth;
 float prevHeight;
 State gameState = State::MENU;
 unsigned int vao, vbo, textVao, textVbo;
-std::map<char, Character> LargeCharacters;
-std::map<char, Character> SmallCharacters;
+std::map<char, Character> largeCharacters;
+std::map<char, Character> smallCharacters;
 
-bool DoPointAndRectCollide(glm::vec2 point, glm::vec2 rectPos, glm::vec2 rectDim)
-{
+bool pointAndRectCollide(glm::vec2 point, glm::vec2 rectPos, glm::vec2 rectDim) {
     return point.x > rectPos.x - (rectDim.x / 2) && point.x < rectPos.x + (rectDim.x / 2) && point.y > rectPos.y - (rectDim.y / 2) && point.y < rectPos.y + (rectDim.y / 2);
 }
 
-Input processInput(GLFWwindow* window)
-{
+Input processInput(GLFWwindow* window) {
     Input ret;
     ret.w = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
     ret.a = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
@@ -40,8 +42,7 @@ Input processInput(GLFWwindow* window)
     return ret;
 }
 
-void InitializeVertexBuffer()
-{
+void initializeVertexBuffer() {
     float positions[12] = {
         1, -1, // bottom right
         1, 1, // top right
@@ -71,8 +72,7 @@ void InitializeVertexBuffer()
     glBindVertexArray(0);
 }
 
-void SetProjectionMatrix(unsigned int& ubo, int width, int height)
-{
+void setProjectionMatrix(unsigned int ubo, int width, int height) {
     float ratio = (float)width / (float)height;
     glm::mat4 projection = glm::ortho(-ratio, ratio, -1.0f, 1.0f);
     glBindBuffer(GL_UNIFORM_BUFFER, ubo);
@@ -80,8 +80,8 @@ void SetProjectionMatrix(unsigned int& ubo, int width, int height)
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void InitializeUniformBuffer(GLFWwindow* window, unsigned int& ubo)
-{
+unsigned int initializeUniformBuffer(GLFWwindow* window) {
+    unsigned int ubo;
     glGenBuffers(1, &ubo);
     glBindBuffer(GL_UNIFORM_BUFFER, ubo);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
@@ -94,66 +94,56 @@ void InitializeUniformBuffer(GLFWwindow* window, unsigned int& ubo)
 
     glfwGetWindowSize(window, &width, &height);
 
-    SetProjectionMatrix(ubo, width, height);
+    setProjectionMatrix(ubo, width, height);
+
+    return ubo;
 }
 
-void windowResizeCallback(GLFWwindow* window, int width, int height)
-{
+void windowResizeCallback(GLFWwindow* window, int width, int height) {
     if (width == 0 || height == 0) return;
     prevWidth = width;
     prevHeight = height;
-    unsigned int ubo = (unsigned int)glfwGetWindowUserPointer(window);
+    unsigned int ubo = *(unsigned int*)glfwGetWindowUserPointer(window);
 
-    SetProjectionMatrix(ubo, width, height);
+    setProjectionMatrix(ubo, width, height);
 
     glViewport(0, 0, width, height);
 }
 
-void handleButton(Button& b, bool clicked, float cursorX, float cursorY, double delta)
-{
-    if (DoPointAndRectCollide(glm::vec2(cursorX, cursorY), b.pos, b.size))
-    {
+void handleButton(Button& b, bool clicked, float cursorX, float cursorY, double delta) {
+    if (pointAndRectCollide(glm::vec2(cursorX, cursorY), b.pos, b.size)) {
         b.textScale = fmin(b.textScale + (delta * 2), 1.2f);
         if (clicked) gameState = b.onClick;
-    }
-    else
-    {
+    } else {
         b.textScale = fmax(b.textScale - (delta * 2), 1.0f);
     }
 }
 
-void handleSlider(Slider& s, float cursorX, float cursorY, bool cursorDown)
-{
-    if (!cursorDown)
-    {
+void handleSlider(Slider& s, float cursorX, float cursorY, bool cursorDown) {
+    if (!cursorDown) {
         s.moving = false;
     }
 
-    if (s.moving)
-    {
+    if (s.moving) {
         float translatedCursor = fmax(fmin(cursorX, s.pos.x + s.size.x - s.size.y), s.pos.x - s.size.x + s.size.y);
         s.value = roundf((translatedCursor - (s.pos.x - s.size.x + s.size.y)) / ((s.size.x * 2) - (s.size.y * 2)) * 500) / 500;
-    }
-    else
-    {
-        if (cursorDown && cursorY < s.pos.y + s.size.y && cursorY > s.pos.y - s.size.y && cursorX < s.pos.x + s.size.x && cursorX > s.pos.x - s.size.x)
-        {
+    } else {
+        if (cursorDown && cursorY < s.pos.y + s.size.y && cursorY > s.pos.y - s.size.y && cursorX < s.pos.x + s.size.x && cursorX > s.pos.x - s.size.x) {
             s.moving = true;
         }
     }
 }
 
-void InitializeCharacters(FT_Face face, int size, std::map<char, Character>& map)
-{
+std::map<char, Character> initializeCharacters(FT_Face face, int size) {
+    std::map<char, Character> map;
+
     FT_Set_Pixel_Sizes(face, 0, size * prevHeight / 1080); // scales font size based on resolution
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    for (unsigned char c = 0; c < 128; c++)
-    {
+    for (unsigned char c = 0; c < 128; c++) {
         
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
-        {
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
             printf("Failed to load Glyph\n");
             continue;
         }
@@ -186,10 +176,11 @@ void InitializeCharacters(FT_Face face, int size, std::map<char, Character>& map
         };
         map.insert(std::pair<char, Character>(c, character));
     }
+
+    return map;
 }
 
-glm::vec2 CoordsToPixels(glm::vec2 in)
-{
+glm::vec2 coordsToPixels(glm::vec2 in) {
     in.x += prevWidth / prevHeight;
     in.x *= prevHeight / 2;
     in.y += 1;
@@ -197,13 +188,11 @@ glm::vec2 CoordsToPixels(glm::vec2 in)
     return in;
 }
 
-glm::mat4 vec2ToModelMatrix(glm::vec2 v)
-{
+glm::mat4 vec2ToModelMatrix(glm::vec2 v) {
     return glm::translate(glm::mat4(1.0f), glm::vec3(v, 0.0f));
 }
 
-void RenderText(unsigned int shader, std::string text, glm::vec2 pos, float scale, glm::vec3 color, std::map<char, Character> characters)
-{
+void renderText(unsigned int shader, std::string text, glm::vec2 pos, float scale, glm::vec3 color, const std::map<char, Character>& characters) {
     glUseProgram(shader);
     glUniform3f(glGetUniformLocation(shader, "textColor"), color.x, color.y, color.z);
     glm::mat4 projection = glm::ortho(0.0f, prevWidth, 0.0f, prevHeight);
@@ -213,21 +202,19 @@ void RenderText(unsigned int shader, std::string text, glm::vec2 pos, float scal
 
     std::string::const_iterator i;
     float total_width = 0.0f;
-    for (i = text.begin(); i != text.end(); i++)
-    {
-        Character ch = characters[*i];
+    for (i = text.begin(); i != text.end(); i++) {
+        Character ch = characters.at(*i);
         total_width += (ch.Advance >> 6) * scale;
     }
-    Character end = characters[text.back()];
+    Character end = characters.at(text.back());
     total_width -= (int(end.Advance >> 6) - (end.Bearing.x + end.Size.x)) * scale;
-    float height = characters['o'].Size.y;
+    float height = characters.at('o').Size.y;
 
-    pos = CoordsToPixels(pos);
+    pos = coordsToPixels(pos);
 
     std::string::const_iterator c;
-    for (c = text.begin(); c != text.end(); c++)
-    {
-        Character ch = characters[*c];
+    for (c = text.begin(); c != text.end(); c++) {
+        Character ch = characters.at(*c);
 
         float xpos = pos.x + ch.Bearing.x * scale;
         float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * scale;
@@ -258,25 +245,21 @@ void RenderText(unsigned int shader, std::string text, glm::vec2 pos, float scal
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-glm::vec2 lerp(glm::vec2 a, glm::vec2 b, float t)
-{
+glm::vec2 lerp(glm::vec2 a, glm::vec2 b, float t) {
     return a + (t * (b - a));
 }
 
-void DrawLoop(GLFWwindow* window)
-{
+void drawLoop(GLFWwindow* window) {
     glm::ivec2 goals = glm::ivec2(0, 0);
 
     double cursorX;
     double cursorY;
 
-    InitializeVertexBuffer();
+    initializeVertexBuffer();
 
-    unsigned int ubo;
+    unsigned int ubo = initializeUniformBuffer(window);
 
-    InitializeUniformBuffer(window, ubo);
-
-    glfwSetWindowUserPointer(window, (void*)ubo);
+    glfwSetWindowUserPointer(window, &ubo);
     
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -370,17 +353,14 @@ void DrawLoop(GLFWwindow* window)
         0.5f
     );
 
-    if (!net::init())
-    {
+    if (!net::init()) {
         printf("net::init failed\n");
     }
     net::Socket sock;
-    if (!net::socketCreate(&sock))
-    {
+    if (!net::socketCreate(&sock)) {
         printf("socketCreate failed\n");
     }
     
-    //net::IPEndpoint serverEndpoint = net::ipEndpointCreate(73, 74, 59, 164, 9999);
     net::IPEndpoint serverEndpoint = net::ipEndpointCreate(127, 0, 0, 1, 9999);
     unsigned char buffer[57];
 
@@ -396,8 +376,7 @@ void DrawLoop(GLFWwindow* window)
     double currentTime = glfwGetTime();
     double lastTime = glfwGetTime();
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         glfwGetCursorPos(window, &cursorX, &cursorY);
 
         cursorX /= prevHeight / 2;
@@ -409,21 +388,15 @@ void DrawLoop(GLFWwindow* window)
         bool clicked = input.click && !prevInput.click;
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            if (!prevEsc)
-            {
-                if (gameState == State::PLAY)
-                {
+            if (!prevEsc) {
+                if (gameState == State::PLAY) {
                     gameState = State::PAUSE;
-                }
-                else if (gameState == State::PAUSE)
-                {
+                } else if (gameState == State::PAUSE) {
                     gameState = State::PLAY;
                 }
             }
             prevEsc = true;
-        }
-        else
-        {
+        } else {
             prevEsc = false;
         }
 
@@ -435,12 +408,9 @@ void DrawLoop(GLFWwindow* window)
 
         glBindVertexArray(vao);
 
-        if (gameState == State::EXIT)
-        {
+        if (gameState == State::EXIT) {
             glfwSetWindowShouldClose(window, 1);
-        }
-        else if (gameState == State::MENU)
-        {
+        } else if (gameState == State::MENU) {
             handleButton(playButton, clicked, cursorX, cursorY, delta);
             handleButton(exitButton, clicked, cursorX, cursorY, delta);
             
@@ -456,48 +426,34 @@ void DrawLoop(GLFWwindow* window)
             std::string sliderStr = std::to_string(testSlider.value);
             sliderStr = sliderStr.substr(0, sliderStr.size() - 3);
 
-            RenderText(textShaderProgram, playButton.text, playButton.pos, playButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), LargeCharacters);
-            RenderText(textShaderProgram, exitButton.text, exitButton.pos, exitButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), LargeCharacters);
-            RenderText(textShaderProgram, sliderStr, glm::vec2(1.1f, 0.5f), 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), SmallCharacters);
-        }
-        else if (gameState == State::JOIN)
-        {
+            renderText(textShaderProgram, playButton.text, playButton.pos, playButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), largeCharacters);
+            renderText(textShaderProgram, exitButton.text, exitButton.pos, exitButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), largeCharacters);
+            renderText(textShaderProgram, sliderStr, glm::vec2(1.1f, 0.5f), 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), smallCharacters);
+        } else if (gameState == State::JOIN) {
             buffer[0] = (char)ClientMessage::Join;
 
-            if (!net::socketSend(&sock, buffer, 1, &serverEndpoint))
-            {
+            if (!net::socketSend(&sock, buffer, 1, &serverEndpoint)) {
                 printf("join message failed\n");
                 gameState = State::MENU;
-            }
-            else
-            {
+            } else {
                 gameState = State::PLAY;
             }
-        }
-        else if (gameState == State::PLAY || gameState == State::PAUSE)
-        {
+        } else if (gameState == State::PLAY || gameState == State::PAUSE) {
             serverTime += delta;
 
             net::IPEndpoint from;
             unsigned int bytesReceived;
-            while (net::socketReceive(&sock, buffer, 57, &from, &bytesReceived))
-            {
-                switch ((ServerMessage)buffer[0])
-                {
-                    case ServerMessage::JoinResult:
-                    {
-                        if (buffer[1])
-                        {
+            while (net::socketReceive(&sock, buffer, 57, &from, &bytesReceived)) {
+                switch ((ServerMessage)buffer[0]) {
+                    case ServerMessage::JoinResult: {
+                        if (buffer[1]) {
                             memcpy(&slot, &buffer[2], sizeof(slot));
-                        }
-                        else
-                        {
+                        } else {
                             printf("server doesn't like us\n");
                         }
                         break;
                     }
-                    case ServerMessage::State:
-                    {
+                    case ServerMessage::State: {
                         numPlayers = 0;
                         unsigned int bytesRead = 1;
 
@@ -507,8 +463,7 @@ void DrawLoop(GLFWwindow* window)
                         memcpy(&serverTime, &buffer[bytesRead], sizeof(serverTime));
                         bytesRead += sizeof(serverTime);
 
-                        while (bytesRead < bytesReceived)
-                        {
+                        while (bytesRead < bytesReceived) {
                             unsigned short id;
                             memcpy(&id, &buffer[bytesRead], sizeof(id));
                             bytesRead += sizeof(id);
@@ -525,18 +480,11 @@ void DrawLoop(GLFWwindow* window)
                             numPlayers++;
                         }
 
-                        std::vector<Snapshot>::iterator it = std::lower_bound(snapshots.begin(), snapshots.end(), serverTime - 0.05f);
-                        if (it != snapshots.end() && it - snapshots.begin() > 0)
-                        {
+                        auto it = std::lower_bound(snapshots.begin(), snapshots.end(), serverTime - 0.05f);
+                        if (it != snapshots.end() && it - snapshots.begin() > 0) {
                             snapshots.erase(snapshots.begin(), it - 1);
                         }
-
-                        Snapshot s;
-                        s.ballPos = ballPos;
-                        s.playerPositions[0] = players[0].pos;
-                        s.playerPositions[1] = players[1].pos;
-                        s.time = serverTime;
-                        snapshots.push_back(s);
+                        snapshots.emplace_back(glm::vec2{ players[0].pos, players[1].pos }, ballPos, serverTime);
                         break;
                     }
                     case ServerMessage::GoalScored:
@@ -549,8 +497,7 @@ void DrawLoop(GLFWwindow* window)
                 }
             }
 
-            if (slot != 0xFFFF)
-            {
+            if (slot != 0xFFFF) {
                 buffer[0] = (unsigned char)ClientMessage::Input;
                 int bytesWritten = 1;
 
@@ -567,8 +514,7 @@ void DrawLoop(GLFWwindow* window)
                 memcpy(&buffer[bytesWritten], &cursorY, sizeof(cursorY));
                 bytesWritten += sizeof(cursorY);
 
-                if (!net::socketSend(&sock, buffer, bytesWritten, &serverEndpoint))
-                {
+                if (!net::socketSend(&sock, buffer, bytesWritten, &serverEndpoint)) {
                     printf("socketSend failed\n");
                 }
             }
@@ -610,8 +556,7 @@ void DrawLoop(GLFWwindow* window)
 
             glUseProgram(playerShaderProgram);
 
-            for (unsigned int i = 0; i < numPlayers; i++)
-            {
+            for (int i = 0; i < numPlayers; ++i) {
                 glUniform1f(playerSize, 0.1f);
                 glUniform3fv(playerColor, 1, glm::value_ptr(glm::vec3(float(i % 2), 0.0f, fabs(float(i % 2) - 1.0f))));
                 glUniform1f(playerStamina, (players[i].stamina - 0.5f) * 2 * 3.14159265f);
@@ -627,18 +572,15 @@ void DrawLoop(GLFWwindow* window)
             glUniformMatrix4fv(ballModel, 1, GL_FALSE, glm::value_ptr(vec2ToModelMatrix(ballRender)));
             glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
 
-            if (gameState == State::PAUSE)
-            {
+            if (gameState == State::PAUSE) {
                 handleButton(resumeButton, clicked, cursorX, cursorY, delta);
                 handleButton(menuButton, clicked, cursorX, cursorY, delta);
-                RenderText(textShaderProgram, resumeButton.text, resumeButton.pos, resumeButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), LargeCharacters);
-                RenderText(textShaderProgram, menuButton.text, menuButton.pos, menuButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), LargeCharacters);
+                renderText(textShaderProgram, resumeButton.text, resumeButton.pos, resumeButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), largeCharacters);
+                renderText(textShaderProgram, menuButton.text, menuButton.pos, menuButton.textScale, glm::vec3(1.0f, 1.0f, 1.0f), largeCharacters);
             }
 
-            RenderText(textShaderProgram, std::to_string(goals[0]) + " - " + std::to_string(goals[1]), glm::vec2(0.0f, 0.9f), 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), LargeCharacters);
-        }
-        else if (gameState == State::LEAVE)
-        {
+            renderText(textShaderProgram, std::to_string(goals[0]) + " - " + std::to_string(goals[1]), glm::vec2(0.0f, 0.9f), 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), largeCharacters);
+        } else if (gameState == State::LEAVE) {
             buffer[0] = (unsigned char)ClientMessage::Leave;
             int bytesWritten = 1;
             memcpy(&buffer[bytesWritten], &slot, sizeof(slot));
@@ -663,8 +605,7 @@ void DrawLoop(GLFWwindow* window)
     return;
 }
 
-void SetVSync(bool sync)
-{
+void setVSync(bool sync) {
     typedef BOOL(APIENTRY* PFNWGLSWAPINTERVALPROC)(int);
     PFNWGLSWAPINTERVALPROC wglSwapIntervalEXT = 0;
 
@@ -676,12 +617,10 @@ void SetVSync(bool sync)
         wglSwapIntervalEXT(sync);
 }
 
-int main()
-{
+int main() {
     ShowWindow(GetConsoleWindow(), SW_SHOW);
 
-    if (!glfwInit())
-    {
+    if (!glfwInit()) {
         printf("GFLW failed to initialize.");
         return -1;
     }
@@ -694,45 +633,41 @@ int main()
     prevHeight = mode->height;
 
     GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "Poooong", monitor, NULL);
-    if (!window)
-    {
+    if (!window) {
         printf("Failed to create GLFW window\n");
         glfwTerminate();
-        return -2;
+        return -1;
     }
 
     glfwMakeContextCurrent(window);
 
-    if (glewInit() != GLEW_OK)
-    {
+    if (glewInit() != GLEW_OK) {
         printf("Glew failed to initialize.");
         glfwTerminate();
-        return -3;
+        return -1;
     }
 
     FT_Library ft;
-    if (FT_Init_FreeType(&ft))
-    {
+    if (FT_Init_FreeType(&ft)) {
         printf("Could not init FreeType Library\n");
         glfwTerminate();
-        return -4;
+        return -1;
     }
 
     FT_Face face;
-    if (FT_New_Face(ft, "res/fonts/Bitter-Regular.otf", 0, &face))
-    {
+    if (FT_New_Face(ft, "res/fonts/Bitter-Regular.otf", 0, &face)) {
         printf("Failed to load font\n");
         glfwTerminate();
-        return -5;
+        return -1;
     }
 
     glfwSetFramebufferSizeCallback(window, windowResizeCallback);
     glfwSwapInterval(1);
 
-    InitializeCharacters(face, 45, LargeCharacters);
-    InitializeCharacters(face, 24, SmallCharacters);
+    largeCharacters = initializeCharacters(face, 45);
+    smallCharacters = initializeCharacters(face, 24);
 
-    DrawLoop(window);
+    drawLoop(window);
 
     return 0;
 }
