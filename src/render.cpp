@@ -140,6 +140,10 @@ namespace render
     RenderData init(GLFWwindow* window) {
         RenderData renderData;
 
+        if (glewInit() != GLEW_OK) {
+            throw std::runtime_error("GLEW failed to initialize");
+        }
+
         std::tie(renderData.vao, renderData.vbo, renderData.textVao, renderData.textVbo) = initializeVertexBuffers();
         renderData.ubo = initializeUniformBuffer(window);
 
@@ -176,11 +180,19 @@ namespace render
         return renderData;
     }
 
+    glm::vec2 coordsToPixels(glm::vec2 in) {
+        in.x += prevWidth / prevHeight;
+        in.x *= prevHeight / 2;
+        in.y += 1;
+        in.y *= prevHeight / 2;
+        return in;
+    }
+
     // TODO: make RenderData pointer the glfwWindowUserPointer and save window width and height in the struct, modifying it on resize
-    void renderText(const RenderData& renderData, const std::string& shader, const std::string& text, const std::string& font, const glm::vec2& position, const glm::vec3& color, float scale) {
-        const auto& shaderData = renderData.shaderData.at(shader);
+    void renderText(const RenderData& renderData, const std::string& text, const std::string& font, const glm::vec2& position, const glm::vec3& color, float scale) {
+        const auto& shaderData = renderData.shaderData.at("text");
         glUseProgram(shaderData.first);
-        glUniform3f(shaderData.second.at("color"), color.x, color.y, color.z);
+        glUniform3f(shaderData.second.at("color"), color.r, color.g, color.b);
         glm::mat4 projection = glm::ortho(0.0f, prevWidth, 0.0f, prevHeight);
         glUniformMatrix4fv(shaderData.second.at("projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glActiveTexture(GL_TEXTURE0);
@@ -227,5 +239,32 @@ namespace render
         }
         glBindVertexArray(0);
         glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    glm::mat4 vec2ToModelMatrix(glm::vec2 v) {
+        return glm::translate(glm::mat4(1.0f), glm::vec3(v, 0.0f));
+    }
+
+    void renderUi(const RenderData& renderData, const ui::UiData& uiData, game::State gameState) {
+        for (const auto& element : uiData.at(gameState)) {
+            if (std::holds_alternative<ui::Button>(element)) {
+                const auto& button = std::get<ui::Button>(element);
+                renderText(renderData, button.text, "large", button.pos, glm::vec3(1.0f, 1.0f, 1.0f), button.textScale);
+            } else if (std::holds_alternative<ui::Slider>(element)) {
+                const auto& slider = std::get<ui::Slider>(element);
+
+                const auto& shaderData = renderData.shaderData.at("slider");
+                glUseProgram(shaderData.first);
+
+                glUniformMatrix4fv(shaderData.second.at("model"), 1, GL_FALSE, glm::value_ptr(vec2ToModelMatrix(slider.pos)));
+                glUniform2fv(shaderData.second.at("size"), 1, glm::value_ptr(slider.size));
+                glUniform1f(shaderData.second.at("circlePos"), slider.value);
+                glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+
+                std::string sliderStr = std::to_string(slider.value);
+                sliderStr = sliderStr.substr(0, sliderStr.size() - 3);
+                renderText(renderData, sliderStr, "small", glm::vec2(1.1f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f);
+            }
+        }
     }
 }

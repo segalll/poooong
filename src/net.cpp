@@ -4,13 +4,6 @@
 
 namespace net
 {
-    bool init() {
-        // Initialize the Boost.Asio library
-        boost::asio::io_service ioService;
-
-        return true;
-    }
-
     IPEndpoint ipEndpointCreate(const std::string& address, unsigned short port) {
         // Create a new IPEndpoint with the given address and port
         IPEndpoint endpoint;

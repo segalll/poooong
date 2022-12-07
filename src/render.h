@@ -1,6 +1,8 @@
 #pragma once
 
+#include "game.h"
 #include "shader.h"
+#include "ui.h"
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -46,4 +48,5 @@ namespace render
     };
 
     RenderData init(GLFWwindow* window);
+    void renderUi(const ui::UiData& uiData, game::State gameState);
 }
