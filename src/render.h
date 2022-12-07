@@ -5,6 +5,7 @@
 #include "ui.h"
 
 #include <GL/glew.h>
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glm/vec2.hpp>
 
@@ -48,5 +49,6 @@ namespace render
     };
 
     RenderData init(GLFWwindow* window);
-    void renderUi(const ui::UiData& uiData, game::State gameState);
+    void renderUi(const RenderData& renderData, const ui::UiData& uiData, game::State gameState);
+    void renderGame(const RenderData& renderData, const game::GameData& gameData);
 }

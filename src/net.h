@@ -1,29 +1,48 @@
 #pragma once
 
-#include <boost/asio.hpp>
+#include "game.h"
+#include "input.h"
+#include "socket.h"
+
+#include <glm/vec2.hpp>
 
 namespace net
 {
-    using boost::asio::ip::udp;
-
-    // IPEndpoint represents an IP address and port number pair
-    struct IPEndpoint {
-        std::string address;
-        unsigned short port;
+    enum class ClientMessage : char {
+        Join,
+        Leave,
+        Input
     };
 
-    // Initialize the networking library
-    bool init();
+    enum class ServerMessage : char {
+        JoinResult,
+        State,
+        GoalScored
+    };
 
-    // Create a new IPEndpoint with the given address and port
-    IPEndpoint ipEndpointCreate(const std::string& address, unsigned short port);
+    struct Snapshot {
+        std::vector<glm::vec2> playerPositions;
+        glm::vec2 ballPos;
+        float time;
 
-    // Create a new socket using the UDP protocol
-    std::unique_ptr<udp::socket> socketCreate();
+        bool operator<(float i) const {
+            return time < i;
+        }
+    };
 
-    // Send a packet to the given endpoint using the given socket
-    void send(const std::string& packet, const IPEndpoint& endpoint, const udp::socket& socket);
+    struct ServerData {
+        float time = 0.0f;
+        unsigned int playerCount = 0;
+        unsigned char slot = 0xFF;
+    };
 
-    // Receive a packet from the given endpoint using the given socket
-    std::pair<std::string, IPEndpoint> receive(const udp::socket& socket);
+    struct NetData {
+        socket::SocketData socketData;
+        ServerData serverData;
+        std::vector<Snapshot> snapshots;
+    };
+
+    NetData init();
+    game::GameData receive(NetData& netData);
+    void send(const NetData& netData, const input::InputData& inputData);
 }

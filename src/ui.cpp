@@ -5,7 +5,6 @@
 namespace ui
 {
     void createButton(UiData& uiData, const glm::vec2& position, const glm::vec2& size, const std::string& text, game::State onClick, game::State gameState) {
-
         uiData[gameState].push_back(Button{position, size, text, onClick}); // could change to emplace_back, but I don't trust it with std::variant yet
     }
 
@@ -68,7 +67,7 @@ namespace ui
 
     // could eventually use templates if adding more UI element types
     // also an alternative solution to copy the UI elements would be nice
-    void handle(UiData& uiData, const input::InputData& inputData, float dt, game::State gameState) {
+    game::State handle(UiData& uiData, const input::InputData& inputData, float dt, game::State gameState) {
         game::State outputState = game::State::None;
         for (auto& element : uiData.at(gameState)) {
             if (std::holds_alternative<Button>(element)) {
@@ -81,5 +80,7 @@ namespace ui
                 element = handleSlider(std::get<Slider>(element), inputData);
             }
         }
+
+        return outputState;
     }
 }

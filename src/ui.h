@@ -38,5 +38,5 @@ namespace ui
     >; // maps game state to visible ui elements
 
     UiData init();
-    void handle(const UiData& uiData, const input::InputData& inputData, float dt, game::State gameState);
+    game::State handle(const UiData& uiData, const input::InputData& inputData, float dt, game::State gameState);
 }

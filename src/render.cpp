@@ -241,7 +241,7 @@ namespace render
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
-    glm::mat4 vec2ToModelMatrix(glm::vec2 v) {
+    constexpr glm::mat4 vec2ToModelMatrix(glm::vec2 v) {
         return glm::translate(glm::mat4(1.0f), glm::vec3(v, 0.0f));
     }
 
@@ -266,5 +266,42 @@ namespace render
                 renderText(renderData, sliderStr, "small", glm::vec2(1.1f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f);
             }
         }
+    }
+
+    void renderGame(const RenderData& renderData, const game::GameData& gameData) {
+        const auto& obroundShaderData = renderData.shaderData.at("obround");
+        glUseProgram(obroundShaderData.first);
+
+        glUniformMatrix4fv(obroundShaderData.second.at("model"), 1, GL_FALSE, glm::value_ptr(vec2ToModelMatrix(glm::vec2(-1.4f, 0.0f))));
+        glUniform2fv(obroundShaderData.second.at("size"), 1, glm::value_ptr(glm::vec2(0.02f, 0.2f)));
+        glUniform3fv(obroundShaderData.second.at("color"), 1, glm::value_ptr(glm::vec3(0.0f, 0.0f, 1.0f)));
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+
+        glUniformMatrix4fv(obroundShaderData.second.at("model"), 1, GL_FALSE, glm::value_ptr(vec2ToModelMatrix(glm::vec2(1.4f, 0.0f))));
+        glUniform2fv(obroundShaderData.second.at("size"), 1, glm::value_ptr(glm::vec2(0.02f, 0.2f)));
+        glUniform3fv(obroundShaderData.second.at("color"), 1, glm::value_ptr(glm::vec3(1.0f, 0.0f, 0.0f)));
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+
+        const auto& playerShaderData = renderData.shaderData.at("player");
+        glUseProgram(playerShaderData.first);
+
+        for (int i = 0; i < gameData.playerData.size(); ++i) {
+            glUniform1f(playerShaderData.second.at("size"), 0.1f);
+            glUniform3fv(playerShaderData.second.at("color"), 1, glm::value_ptr(glm::vec3(float(i % 2), 0.0f, fabs(float(i % 2) - 1.0f))));
+            glUniform1f(playerShaderData.second.at("stamina"), (gameData.playerData[i].stamina - 0.5f) * 2 * 3.14159265f);
+            glUniform2fv(playerShaderData.second.at("paddleVec"), 1, glm::value_ptr(gameData.playerData[i].paddlePos));
+            glUniform1f(playerShaderData.second.at("paddleSize"), 0.05f);
+            glUniformMatrix4fv(playerShaderData.second.at("model"), 1, GL_FALSE, glm::value_ptr(vec2ToModelMatrix(gameData.playerData[i].pos)));
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+        }
+
+        const auto& ballShaderData = renderData.shaderData.at("ball");
+        glUseProgram(ballShaderData.first);
+
+        glUniform1f(ballShaderData.second.at("size"), 0.02f);
+        glUniformMatrix4fv(ballShaderData.second.at("model"), 1, GL_FALSE, glm::value_ptr(vec2ToModelMatrix(gameData.ballData.pos)));
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
+
+        renderText(renderData, std::to_string(gameData.goals[0]) + " - " + std::to_string(gameData.goals[1]), "large", glm::vec2(0.0f, 0.9f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f);
     }
 }
