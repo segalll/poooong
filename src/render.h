@@ -1,12 +1,11 @@
 #pragma once
 
 #include "game.h"
+#include "net.h"
 #include "shader.h"
 #include "ui.h"
 
 #include <GL/glew.h>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 #include <glm/vec2.hpp>
 
 #include <string>
@@ -46,9 +45,12 @@ namespace render
         GLuint ubo;
         ShaderData shaderData;
         FontData fontData;
+        int windowWidth, windowHeight;
     };
 
-    RenderData init(GLFWwindow* window);
-    void renderUi(const RenderData& renderData, const ui::UiData& uiData, game::State gameState);
-    void renderGame(const RenderData& renderData, const game::GameData& gameData);
+    RenderData init(int windowWidth, int windowHeight);
+    void resize(const RenderData& renderData, int width, int height);
+    void renderUi(const RenderData& renderData, const ui::UiData& uiData, game::GameState gameState);
+    void renderGame(const RenderData& renderData, const net::GameData& gameData);
+    void render(const RenderData& renderData, const net::GameData& gameData, const ui::UiData& uiData);
 }

@@ -12,8 +12,8 @@ namespace net
         return a + (t * (b - a));
     }
 
-    game::GameData receive(NetData& netData) {
-        game::GameData gameData;
+    GameData receive(NetData& netData) {
+        GameData gameData;
 
         while (true) {
             std::string packet = socket::receive(netData.socketData);
@@ -120,5 +120,19 @@ namespace net
 
             socket::send(netData.socketData, buffer);
         }
+    }
+
+    void join(const NetData& netData) {
+        char buffer[1];
+        buffer[0] = (char)ClientMessage::Join;
+        socket::send(netData.socketData, buffer);
+    }
+
+    void leave(const NetData& netData) {
+        char buffer[2];
+        buffer[0] = (char)ClientMessage::Leave;
+        int bytesWritten = 1;
+        memcpy(&buffer[bytesWritten], &netData.serverData.slot, sizeof(netData.serverData.slot));
+        socket::send(netData.socketData, buffer);
     }
 }

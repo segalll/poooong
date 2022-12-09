@@ -4,22 +4,22 @@
 
 namespace ui
 {
-    void createButton(UiData& uiData, const glm::vec2& position, const glm::vec2& size, const std::string& text, game::State onClick, game::State gameState) {
+    void createButton(UiData& uiData, const glm::vec2& position, const glm::vec2& size, const std::string& text, game::GameState onClick, game::GameState gameState) {
         uiData[gameState].push_back(Button{position, size, text, onClick}); // could change to emplace_back, but I don't trust it with std::variant yet
     }
 
-    void createSlider(UiData& uiData, const glm::vec2& position, const glm::vec2& size, float value, game::State gameState) {
+    void createSlider(UiData& uiData, const glm::vec2& position, const glm::vec2& size, float value, game::GameState gameState) {
         uiData[gameState].push_back(Slider{position, size, value});
     }
     
     UiData init() {
         UiData uiData;
 
-        createButton(uiData, glm::vec2(0.0f, 0.0f), glm::vec2(0.5f, 0.15f), "Play", game::State::Join, game::State::Menu);
-        createButton(uiData, glm::vec2(0.0f, -0.4f), glm::vec2(0.5f, 0.15f), "Exit", game::State::Exit, game::State::Menu);
-        createButton(uiData, glm::vec2(0.0f, 0.0f), glm::vec2(0.5f, 0.15f), "Resume", game::State::Game, game::State::Pause);
-        createButton(uiData, glm::vec2(0.0f, -0.4f), glm::vec2(0.5f, 0.15f), "Menu", game::State::Leave, game::State::Pause);
-        createSlider(uiData, glm::vec2(0.5f, 0.5f), glm::vec2(0.4f, 0.025f), 0.5f, game::State::Menu);
+        createButton(uiData, glm::vec2(0.0f, 0.0f), glm::vec2(0.5f, 0.15f), "Play", game::GameState::Join, game::GameState::Menu);
+        createButton(uiData, glm::vec2(0.0f, -0.4f), glm::vec2(0.5f, 0.15f), "Exit", game::GameState::Exit, game::GameState::Menu);
+        createButton(uiData, glm::vec2(0.0f, 0.0f), glm::vec2(0.5f, 0.15f), "Resume", game::GameState::Game, game::GameState::Pause);
+        createButton(uiData, glm::vec2(0.0f, -0.4f), glm::vec2(0.5f, 0.15f), "Menu", game::GameState::Leave, game::GameState::Pause);
+        createSlider(uiData, glm::vec2(0.5f, 0.5f), glm::vec2(0.4f, 0.025f), 0.5f, game::GameState::Menu);
 
         return uiData;
     }
@@ -31,9 +31,9 @@ namespace ui
                point.y < rectPos.y + (rectDim.y / 2);
     }
 
-    std::pair<Button, game::State> handleButton(const Button& button, const input::InputData& inputData, double dt) {
+    std::pair<Button, game::GameState> handleButton(const Button& button, const input::InputData& inputData, double dt) {
         Button newButton = button;
-        game::State outputState = game::State::None;
+        game::GameState outputState = game::GameState::None;
         if (pointAndRectCollide(inputData.cursorPos, button.pos, button.size)) {
             newButton.textScale = fmin(button.textScale + (dt * 2), 1.2f);
             if (inputData.cursorDown) outputState = button.onClick;
@@ -67,13 +67,13 @@ namespace ui
 
     // could eventually use templates if adding more UI element types
     // also an alternative solution to copy the UI elements would be nice
-    game::State handle(UiData& uiData, const input::InputData& inputData, float dt, game::State gameState) {
-        game::State outputState = game::State::None;
+    game::GameState handle(UiData& uiData, const input::InputData& inputData, float dt, game::GameState gameState) {
+        game::GameState outputState = game::GameState::None;
         for (auto& element : uiData.at(gameState)) {
             if (std::holds_alternative<Button>(element)) {
-                game::State result;
+                game::GameState result;
                 std::tie(element, result) = handleButton(std::get<Button>(element), inputData, dt);
-                if (result != game::State::None) {
+                if (result != game::GameState::None) {
                     outputState = result;
                 }
             } else if (std::holds_alternative<Slider>(element)) {

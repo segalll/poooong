@@ -56,7 +56,7 @@ namespace render
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 
-    GLuint initializeUniformBuffer(GLFWwindow* window) {
+    GLuint initializeUniformBuffer(int windowWidth, int windowHeight) {
         GLuint ubo;
         glGenBuffers(1, &ubo);
         glBindBuffer(GL_UNIFORM_BUFFER, ubo);
@@ -65,12 +65,7 @@ namespace render
 
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, ubo, 0, sizeof(glm::mat4));
 
-        int width;
-        int height;
-
-        glfwGetWindowSize(window, &width, &height);
-
-        setProjectionMatrix(ubo, width, height);
+        setProjectionMatrix(ubo, windowWidth, windowHeight);
 
         return ubo;
     }
@@ -101,7 +96,7 @@ namespace render
         for (unsigned char c = 0; c < 128; c++) {
             
             if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
-                printf("Failed to load Glyph\n");
+                printf("Failed to load glyph\n");
                 continue;
             }
             
@@ -137,7 +132,7 @@ namespace render
         return map;
     }
 
-    RenderData init(GLFWwindow* window) {
+    RenderData init(int windowWidth, int windowHeight) {
         RenderData renderData;
 
         if (glewInit() != GLEW_OK) {
@@ -145,9 +140,7 @@ namespace render
         }
 
         std::tie(renderData.vao, renderData.vbo, renderData.textVao, renderData.textVbo) = initializeVertexBuffers();
-        renderData.ubo = initializeUniformBuffer(window);
-
-        glfwSetWindowUserPointer(window, &renderData.ubo);
+        renderData.ubo = initializeUniformBuffer(windowWidth, windowHeight);
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -170,22 +163,29 @@ namespace render
             throw std::runtime_error("Failed to load font");
         }
 
-        int windowHeight;
-        glfwGetWindowSize(window, nullptr, &windowHeight);
-
         // TODO: consider regenerating on window resize
         renderData.fontData["small"] = initializeCharacters(face, 24, windowHeight);
         renderData.fontData["large"] = initializeCharacters(face, 45, windowHeight);
 
+        renderData.windowWidth = windowWidth;
+        renderData.windowHeight = windowHeight;
+
         return renderData;
     }
 
-    glm::vec2 coordsToPixels(glm::vec2 in) {
-        in.x += prevWidth / prevHeight;
-        in.x *= prevHeight / 2;
-        in.y += 1;
-        in.y *= prevHeight / 2;
-        return in;
+    void resize(RenderData& renderData, int width, int height) {
+        setProjectionMatrix(renderData.ubo, width, height);
+        glViewport(0, 0, width, height);
+        renderData.windowWidth = width;
+        renderData.windowHeight = height;
+    }
+
+    constexpr glm::vec2 coordsToPixels(glm::vec2 in, glm::vec2 windowSize) {
+        return glm::vec2((in.x * windowSize.y + windowSize.x) / 2, (in.y + 1) * windowSize.y / 2);
+    }
+
+    constexpr glm::vec2 pixelsToCoords(glm::vec2 in, glm::vec2 windowSize) {
+        return glm::vec2((2 * in.x - windowSize.x) / windowSize.y, (-2 * in.y) / windowSize.y + 1);
     }
 
     // TODO: make RenderData pointer the glfwWindowUserPointer and save window width and height in the struct, modifying it on resize
@@ -193,8 +193,6 @@ namespace render
         const auto& shaderData = renderData.shaderData.at("text");
         glUseProgram(shaderData.first);
         glUniform3f(shaderData.second.at("color"), color.r, color.g, color.b);
-        glm::mat4 projection = glm::ortho(0.0f, prevWidth, 0.0f, prevHeight);
-        glUniformMatrix4fv(shaderData.second.at("projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(renderData.textVao);
 
@@ -208,7 +206,7 @@ namespace render
         total_width -= (int(end.advance >> 6) - (end.bearing.x + end.size.x)) * scale;
         float height = fontData.at('o').size.y;
 
-        glm::vec2 pos = coordsToPixels(position);
+        glm::vec2 pos = coordsToPixels(position, glm::vec2(renderData.windowWidth, renderData.windowHeight));
 
         for (char c : text) {
             const FontCharacter& ch = fontData.at(c);
@@ -303,5 +301,11 @@ namespace render
         glDrawArrays(GL_TRIANGLE_FAN, 0, 6);
 
         renderText(renderData, std::to_string(gameData.goals[0]) + " - " + std::to_string(gameData.goals[1]), "large", glm::vec2(0.0f, 0.9f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f);
+    }
+
+    void render(const RenderData& renderData, const game::GameData& gameData, const ui::UiData& uiData) {
+        glClear(GL_COLOR_BUFFER_BIT);
+        renderGame(renderData, gameData);
+        renderUi(renderData, uiData, gameData.state);
     }
 }

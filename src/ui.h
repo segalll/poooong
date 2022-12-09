@@ -16,7 +16,7 @@ namespace ui
         glm::vec2 pos;
         glm::vec2 size;
         std::string text;
-        game::State onClick;
+        game::GameState onClick;
         float textScale = 1.0f;
     };
 
@@ -28,7 +28,7 @@ namespace ui
     };
 
     using UiData = std::unordered_map<
-        game::State,
+        game::GameState,
         std::vector<
             std::variant<
                 Button,
@@ -38,5 +38,5 @@ namespace ui
     >; // maps game state to visible ui elements
 
     UiData init();
-    game::State handle(const UiData& uiData, const input::InputData& inputData, float dt, game::State gameState);
+    game::GameState handle(const UiData& uiData, const input::InputData& inputData, float dt, game::GameState gameState);
 }
