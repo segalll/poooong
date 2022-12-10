@@ -12,6 +12,6 @@ namespace net::socket
     };
 
     SocketData init();
-    void send(const SocketData& socketData, const std::string& message);
-    std::string receive(const SocketData& socketData);
+    bool send(SocketData& socketData, const std::string& message);
+    std::pair<bool, std::string> receive(SocketData& socketData);
 }

@@ -52,5 +52,5 @@ namespace render
     void resize(const RenderData& renderData, int width, int height);
     void renderUi(const RenderData& renderData, const ui::UiData& uiData, game::GameState gameState);
     void renderGame(const RenderData& renderData, const net::GameData& gameData);
-    void render(const RenderData& renderData, const net::GameData& gameData, const ui::UiData& uiData);
+    void render(const RenderData& renderData, const net::GameData& gameData, const ui::UiData& uiData, game::GameState gameState);
 }

@@ -47,18 +47,20 @@ int main() {
 
         inputData = input::processInput(window, inputData);
         game::GameState uiOutputState = ui::handle(uiData, inputData, dt, gameState);
-        net::GameData gameData = net::receive(netData);
+        net::GameData gameData = net::receive(netData, dt);
         net::send(netData, inputData);
-        render::render(renderData, gameData, uiData);
-        game::update(gameState, inputData, uiOutputState);
+        render::render(renderData, gameData, uiData, gameState);
 
+        game::GameState netOutputState = game::GameState::None;
         if (gameState == game::GameState::Exit) {
             glfwSetWindowShouldClose(window, 1);
         } else if (gameState == game::GameState::Join) {
-            net::join(netData);
+            netOutputState = net::join(netData);
         } else if (gameState == game::GameState::Leave) {
             net::leave(netData);
         }
+
+        game::update(gameState, inputData, uiOutputState, netOutputState);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

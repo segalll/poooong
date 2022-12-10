@@ -243,7 +243,7 @@ namespace render
         return glm::translate(glm::mat4(1.0f), glm::vec3(v, 0.0f));
     }
 
-    void renderUi(const RenderData& renderData, const ui::UiData& uiData, game::State gameState) {
+    void renderUi(const RenderData& renderData, const ui::UiData& uiData, game::GameState gameState) {
         for (const auto& element : uiData.at(gameState)) {
             if (std::holds_alternative<ui::Button>(element)) {
                 const auto& button = std::get<ui::Button>(element);
@@ -266,7 +266,7 @@ namespace render
         }
     }
 
-    void renderGame(const RenderData& renderData, const game::GameData& gameData) {
+    void renderGame(const RenderData& renderData, const net::GameData& gameData) {
         const auto& obroundShaderData = renderData.shaderData.at("obround");
         glUseProgram(obroundShaderData.first);
 
@@ -303,9 +303,9 @@ namespace render
         renderText(renderData, std::to_string(gameData.goals[0]) + " - " + std::to_string(gameData.goals[1]), "large", glm::vec2(0.0f, 0.9f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f);
     }
 
-    void render(const RenderData& renderData, const game::GameData& gameData, const ui::UiData& uiData) {
+    void render(const RenderData& renderData, const net::GameData& gameData, const ui::UiData& uiData, game::GameState gameState) {
         glClear(GL_COLOR_BUFFER_BIT);
         renderGame(renderData, gameData);
-        renderUi(renderData, uiData, gameData.state);
+        renderUi(renderData, uiData, gameState);
     }
 }

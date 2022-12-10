@@ -19,5 +19,5 @@ namespace game
         Play
     };
 
-    GameState update(GameState gameState, const input::InputData& inputData, GameState uiOutputState);
+    GameState update(GameState gameState, const input::InputData& inputData, GameState uiOutputState, GameState netOutputState);
 }

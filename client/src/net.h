@@ -59,8 +59,8 @@ namespace net
     };
 
     NetData init();
-    GameData receive(NetData& netData);
-    void send(const NetData& netData, const input::InputData& inputData);
-    void join(const NetData& netData);
-    void leave(const NetData& netData);
+    GameData receive(NetData& netData, float dt);
+    void send(NetData& netData, const input::InputData& inputData);
+    game::GameState join(NetData& netData);
+    void leave(NetData& netData);
 }

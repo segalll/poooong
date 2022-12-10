@@ -2,7 +2,7 @@
 
 namespace game
 {
-    GameState update(GameState gameState, const input::InputData& inputData, GameState uiOutputState) {
+    GameState update(GameState gameState, const input::InputData& inputData, GameState uiOutputState, GameState netOutputState) {
         if (inputData.escape.wasTapped()) {
             if (gameState == GameState::Play) {
                 return GameState::Pause;
@@ -19,6 +19,10 @@ namespace game
 
         if (uiOutputState != GameState::None) {
             return uiOutputState;
+        }
+
+        if (netOutputState != GameState::None) {
+            return netOutputState;
         }
 
         return gameState;

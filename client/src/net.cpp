@@ -1,5 +1,7 @@
 #include "net.h"
 
+#include <iostream>
+
 namespace net
 {
     NetData init() {
@@ -12,12 +14,14 @@ namespace net
         return a + (t * (b - a));
     }
 
-    GameData receive(NetData& netData) {
+    GameData receive(NetData& netData, float dt) {
         GameData gameData;
 
         while (true) {
-            std::string packet = socket::receive(netData.socketData);
-            if (packet.size() == 0) break;
+            auto [success, packet] = socket::receive(netData.socketData);
+            if (!success) break;
+
+            netData.serverData.time += dt;
             switch ((ServerMessage)packet[0]) {
                 case ServerMessage::JoinResult: {
                     if (packet[1]) {
@@ -63,7 +67,13 @@ namespace net
                     if (it != netData.snapshots.end() && it - netData.snapshots.begin() > 0) {
                         netData.snapshots.erase(netData.snapshots.begin(), it - 1);
                     }
-                    netData.snapshots.emplace_back(gameData.playerData, gameData.ballData.pos, netData.serverData.time);
+
+                    // this feels inefficient
+                    std::vector<glm::vec2> playerPositions;
+                    for (const PlayerData& playerData : gameData.playerData) {
+                        playerPositions.push_back(playerData.pos);
+                    }
+                    netData.snapshots.push_back(Snapshot{playerPositions, gameData.ballData.pos, netData.serverData.time});
                     break;
                 }
                 case ServerMessage::GoalScored: {
@@ -98,7 +108,7 @@ namespace net
         return gameData;
     }
 
-    void send(const NetData& netData, const input::InputData& inputData) {
+    void send(NetData& netData, const input::InputData& inputData) {
         if (netData.serverData.slot != 0xFF) {
             char buffer[57];
             buffer[0] = (char)ClientMessage::Input;
@@ -122,13 +132,18 @@ namespace net
         }
     }
 
-    void join(const NetData& netData) {
+    game::GameState join(NetData& netData) {
         char buffer[1];
         buffer[0] = (char)ClientMessage::Join;
-        socket::send(netData.socketData, buffer);
+        bool success = socket::send(netData.socketData, buffer);
+        if (!success) {
+            std::cout << "Join message failed\n";
+            return game::GameState::Menu;
+        }
+        return game::GameState::Play;
     }
 
-    void leave(const NetData& netData) {
+    void leave(NetData& netData) {
         char buffer[2];
         buffer[0] = (char)ClientMessage::Leave;
         int bytesWritten = 1;
