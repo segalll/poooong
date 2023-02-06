@@ -10,7 +10,7 @@ int main() {
     if (!glfwInit()) {
         throw std::runtime_error("GLFW failed to initialize");
     }
-        
+
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 

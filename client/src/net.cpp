@@ -68,12 +68,13 @@ namespace net
                         netData.snapshots.erase(netData.snapshots.begin(), it - 1);
                     }
 
-                    // this feels inefficient
+                    // perhaps there is some sort of std::transform that can be done here?
                     std::vector<glm::vec2> playerPositions;
                     for (const PlayerData& playerData : gameData.playerData) {
                         playerPositions.push_back(playerData.pos);
                     }
-                    netData.snapshots.push_back(Snapshot{playerPositions, gameData.ballData.pos, netData.serverData.time});
+
+                    netData.snapshots.emplace_back(std::move(playerPositions), gameData.ballData.pos, netData.serverData.time);
                     break;
                 }
                 case ServerMessage::GoalScored: {
@@ -86,7 +87,7 @@ namespace net
         }
 
         // game data may or may not be empty and cause a runtime error
-        // i have not though it through very much yet
+        // i have not thought it through very much yet
         if (netData.snapshots.size() < 1) {
             gameData.playerData[0].pos = glm::vec2(-0.3f, 0.0f);
             gameData.playerData[1].pos = glm::vec2(0.3f, 0.0f);

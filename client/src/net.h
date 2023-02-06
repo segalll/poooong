@@ -25,6 +25,12 @@ namespace net
         glm::vec2 ballPos;
         float time;
 
+        Snapshot(std::vector<glm::vec2>&& pp, glm::vec2 bp, float t)
+            : playerPositions(pp)
+            , ballPos(bp)
+            , time(t)
+        {}
+
         bool operator<(float i) const {
             return time < i;
         }

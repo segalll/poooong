@@ -13,6 +13,8 @@
 
 namespace render
 {
+    // the usage of std::pair makes accessing program vs uniform map ambiguous
+    // consider making a new struct for more explicitness and readability
     using ShaderData = std::unordered_map<
         std::string, // shader name
         std::pair<

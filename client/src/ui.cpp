@@ -11,7 +11,7 @@ namespace ui
     void createSlider(UiData& uiData, const glm::vec2& position, const glm::vec2& size, float value, game::GameState gameState) {
         uiData[gameState].push_back(Slider{position, size, value});
     }
-    
+
     UiData init() {
         UiData uiData;
 
